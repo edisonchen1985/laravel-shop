@@ -15,7 +15,9 @@
             <ul>
                 @foreach ($orders as $order)
                     <li>
-                        <h2>{{ $order->order_number }}</h2>
+                        <h2>
+                            <a href="{{ route('orders.show', $order) }}">{{ $order->order_number }}</a>
+                        </h2>
                         <p>Status: {{ $order->status }}</p>
                         <p>Placed: {{ $order->placed_at?->format('Y-m-d H:i') ?? $order->created_at->format('Y-m-d H:i') }}</p>
                         <p>Total: {{ $order->total }}</p>

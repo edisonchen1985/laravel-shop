@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Gate;
 
 class OrderController extends Controller
 {
@@ -19,5 +21,14 @@ class OrderController extends Controller
             ->paginate(10);
 
         return view('orders.index', compact('orders'));
+    }
+
+    public function show(Order $order): View
+    {
+        Gate::authorize('view', $order);
+
+        $order->load('items');
+
+        return view('orders.show', compact('order'));
     }
 }

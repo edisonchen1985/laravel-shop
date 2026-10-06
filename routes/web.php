@@ -32,3 +32,7 @@ Route::post('/checkout', [CheckoutController::class, 'store'])
 Route::get('/orders', [OrderController::class, 'index'])
     ->middleware('auth')
     ->name('orders.index');
+
+Route::get('/orders/{order}', [OrderController::class, 'show'])
+    ->middleware('auth')
+    ->name('orders.show');
