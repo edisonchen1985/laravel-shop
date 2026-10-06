@@ -40,4 +40,14 @@ class CartController extends Controller
 
         return redirect()->back()->with('success', 'Cart quantity updated.');
     }
+
+    public function destroy(int $cartItem, CartService $cartService): RedirectResponse
+    {
+        /** @var User $user */
+        $user = request()->user();
+
+        $cartService->removeItem($user, $cartItem);
+
+        return redirect()->back()->with('success', 'Product removed from your cart.');
+    }
 }

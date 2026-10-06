@@ -109,4 +109,15 @@ class CartService
             return $cartItem;
         });
     }
+
+    public function removeItem(User $user, int $cartItemId): void
+    {
+        $cart = $user->cart()->first();
+
+        if (! $cart) {
+            throw new NotFoundHttpException;
+        }
+
+        $cart->items()->whereKey($cartItemId)->firstOrFail()->delete();
+    }
 }

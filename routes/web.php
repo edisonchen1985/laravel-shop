@@ -18,3 +18,7 @@ Route::post('/cart/items', [CartController::class, 'store'])
 Route::patch('/cart/items/{cartItem}', [CartController::class, 'update'])
     ->middleware('auth')
     ->name('cart.items.update');
+
+Route::delete('/cart/items/{cartItem}', [CartController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('cart.items.destroy');
