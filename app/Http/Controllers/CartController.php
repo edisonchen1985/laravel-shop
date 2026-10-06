@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AddCartItemRequest;
+use App\Http\Requests\UpdateCartItemRequest;
 use App\Models\User;
 use App\Services\CartService;
 use Illuminate\Http\RedirectResponse;
@@ -28,5 +29,15 @@ class CartController extends Controller
         $cartService->addItem($user, (int) $data['product_id'], (int) $data['quantity']);
 
         return redirect()->back()->with('success', 'Product added to your cart.');
+    }
+
+    public function update(UpdateCartItemRequest $request, int $cartItem, CartService $cartService): RedirectResponse
+    {
+        /** @var User $user */
+        $user = request()->user();
+
+        $cartService->updateItem($user, $cartItem, (int) $request->validated('quantity'));
+
+        return redirect()->back()->with('success', 'Cart quantity updated.');
     }
 }
