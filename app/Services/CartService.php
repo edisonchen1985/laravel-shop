@@ -29,7 +29,16 @@ class CartService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $cart = $lockedUser->cart()->firstOrCreate([]);
+            $cart = $lockedUser->cart()->lockForUpdate()->first();
+
+            if (! $cart) {
+                $cart = $lockedUser->cart()->create([]);
+            }
+
+            $cartItem = $cart->items()
+                ->where('product_id', $productId)
+                ->lockForUpdate()
+                ->first();
 
             // Product's SoftDeletes global scope excludes soft-deleted products.
             $product = Product::query()
@@ -48,10 +57,6 @@ class CartService
                     'quantity' => 'The requested quantity exceeds available stock.',
                 ]);
             }
-
-            $cartItem = $cart->items()
-                ->where('product_id', $product->getKey())
-                ->first();
 
             if ($cartItem) {
                 $newQuantity = $cartItem->quantity + $quantity;
@@ -78,13 +83,21 @@ class CartService
     public function updateItem(User $user, int $cartItemId, int $quantity): CartItem
     {
         return DB::transaction(function () use ($user, $cartItemId, $quantity): CartItem {
-            $cart = $user->cart()->first();
+            $lockedUser = User::query()
+                ->whereKey($user->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $cart = $lockedUser->cart()->lockForUpdate()->first();
 
             if (! $cart) {
                 throw new NotFoundHttpException;
             }
 
-            $cartItem = $cart->items()->whereKey($cartItemId)->firstOrFail();
+            $cartItem = $cart->items()
+                ->whereKey($cartItemId)
+                ->lockForUpdate()
+                ->firstOrFail();
 
             $product = Product::withTrashed()
                 ->whereKey($cartItem->product_id)
@@ -112,12 +125,23 @@ class CartService
 
     public function removeItem(User $user, int $cartItemId): void
     {
-        $cart = $user->cart()->first();
+        DB::transaction(function () use ($user, $cartItemId): void {
+            $lockedUser = User::query()
+                ->whereKey($user->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if (! $cart) {
-            throw new NotFoundHttpException;
-        }
+            $cart = $lockedUser->cart()->lockForUpdate()->first();
 
-        $cart->items()->whereKey($cartItemId)->firstOrFail()->delete();
+            if (! $cart) {
+                throw new NotFoundHttpException;
+            }
+
+            $cart->items()
+                ->whereKey($cartItemId)
+                ->lockForUpdate()
+                ->firstOrFail()
+                ->delete();
+        });
     }
 }

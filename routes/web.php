@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -22,3 +23,7 @@ Route::patch('/cart/items/{cartItem}', [CartController::class, 'update'])
 Route::delete('/cart/items/{cartItem}', [CartController::class, 'destroy'])
     ->middleware('auth')
     ->name('cart.items.destroy');
+
+Route::post('/checkout', [CheckoutController::class, 'store'])
+    ->middleware('auth')
+    ->name('checkout.store');
