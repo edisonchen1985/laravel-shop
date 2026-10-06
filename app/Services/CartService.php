@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\User;
@@ -10,6 +11,15 @@ use Illuminate\Validation\ValidationException;
 
 class CartService
 {
+    public function getCartForUser(User $user): ?Cart
+    {
+        return $user->cart()
+            ->with([
+                'items.product' => fn ($query) => $query->withTrashed(),
+            ])
+            ->first();
+    }
+
     public function addItem(User $user, int $productId, int $quantity): CartItem
     {
         return DB::transaction(function () use ($user, $productId, $quantity): CartItem {

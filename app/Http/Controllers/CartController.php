@@ -6,9 +6,19 @@ use App\Http\Requests\AddCartItemRequest;
 use App\Models\User;
 use App\Services\CartService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
 class CartController extends Controller
 {
+    public function index(CartService $cartService): View
+    {
+        /** @var User $user */
+        $user = request()->user();
+        $cart = $cartService->getCartForUser($user);
+
+        return view('cart.index', compact('cart'));
+    }
+
     public function store(AddCartItemRequest $request, CartService $cartService): RedirectResponse
     {
         /** @var User $user */

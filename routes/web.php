@@ -7,6 +7,10 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/cart', [CartController::class, 'index'])
+    ->middleware('auth')
+    ->name('cart.index');
+
 Route::post('/cart/items', [CartController::class, 'store'])
     ->middleware('auth')
     ->name('cart.items.store');
