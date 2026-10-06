@@ -6,6 +6,8 @@
     <title>Order {{ $order->order_number }}</title>
 </head>
 <body>
+    @include('partials.navigation')
+
     <main>
         <p><a href="{{ route('orders.index') }}">Back to my orders</a></p>
         <h1>Order {{ $order->order_number }}</h1>

@@ -6,6 +6,8 @@
     <title>Your Cart</title>
 </head>
 <body>
+    @include('partials.navigation')
+
     <main>
         <h1>Your Cart</h1>
 
