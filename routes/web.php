@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -27,3 +28,7 @@ Route::delete('/cart/items/{cartItem}', [CartController::class, 'destroy'])
 Route::post('/checkout', [CheckoutController::class, 'store'])
     ->middleware('auth')
     ->name('checkout.store');
+
+Route::get('/orders', [OrderController::class, 'index'])
+    ->middleware('auth')
+    ->name('orders.index');
