@@ -14,11 +14,28 @@ class CartService
 {
     public function getCartForUser(User $user): ?Cart
     {
-        return $user->cart()
+        $cart = $user->cart()
             ->with([
                 'items.product' => fn ($query) => $query->withTrashed()->with('category'),
             ])
             ->first();
+
+        if (! $cart) {
+            return null;
+        }
+
+        $subtotalCents = $cart->items->sum(function (CartItem $item): int {
+            if (! $item->product) {
+                return 0;
+            }
+
+            return $this->toCents((string) $item->product->price) * $item->quantity;
+        });
+
+        $cart->setAttribute('subtotal', $this->fromCents($subtotalCents));
+        $cart->setAttribute('total', $this->fromCents($subtotalCents));
+
+        return $cart;
     }
 
     public function addItem(User $user, int $productId, int $quantity): CartItem
@@ -159,5 +176,17 @@ class CartService
                 ->firstOrFail()
                 ->delete();
         });
+    }
+
+    private function toCents(string $amount): int
+    {
+        [$units, $fraction] = array_pad(explode('.', $amount, 2), 2, '0');
+
+        return ((int) $units * 100) + (int) str_pad(substr($fraction, 0, 2), 2, '0');
+    }
+
+    private function fromCents(int $amount): string
+    {
+        return intdiv($amount, 100).'.'.str_pad((string) ($amount % 100), 2, '0', STR_PAD_LEFT);
     }
 }

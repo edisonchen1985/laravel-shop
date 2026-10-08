@@ -37,6 +37,57 @@ class ViewCartTest extends TestCase
             ->assertSeeText('Quantity: 2');
     }
 
+    public function test_available_items_show_quantity_remove_and_checkout_actions(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $product = $this->createProduct();
+        $cart = Cart::create(['user_id' => $user->id]);
+        $cartItem = CartItem::create([
+            'cart_id' => $cart->id,
+            'product_id' => $product->id,
+            'quantity' => 2,
+        ]);
+
+        // Act
+        $response = $this->get(route('cart.index'));
+
+        // Assert
+        $response->assertOk()
+            ->assertSee(route('cart.items.update', $cartItem), false)
+            ->assertSee(route('cart.items.destroy', $cartItem), false)
+            ->assertSee(route('checkout.store'), false)
+            ->assertSee('name="quantity"', false)
+            ->assertSeeText('Update quantity')
+            ->assertSeeText('Remove')
+            ->assertSeeText('Checkout');
+    }
+
+    public function test_cart_displays_subtotal_and_total_calculated_from_product_prices(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $product = $this->createProduct(['price' => '19.90']);
+        $cart = Cart::create(['user_id' => $user->id]);
+        CartItem::create([
+            'cart_id' => $cart->id,
+            'product_id' => $product->id,
+            'quantity' => 2,
+        ]);
+
+        // Act
+        $response = $this->get(route('cart.index'));
+
+        // Assert
+        $response->assertOk()
+            ->assertSeeText('Subtotal: 39.80')
+            ->assertSeeText('Total: 39.80');
+        $this->assertSame('39.80', $response->viewData('cart')->subtotal);
+        $this->assertSame('39.80', $response->viewData('cart')->total);
+    }
+
     public function test_user_without_a_cart_sees_empty_state_and_no_cart_is_created(): void
     {
         // Arrange
@@ -135,7 +186,12 @@ class ViewCartTest extends TestCase
             ->assertSeeText($product->name)
             ->assertSeeText('Unavailable')
             ->assertSeeText('Remove')
-            ->assertSee(route('cart.items.destroy', $cartItem), false);
+            ->assertSee(route('cart.items.destroy', $cartItem), false)
+            ->assertDontSee('value="PATCH"', false)
+            ->assertDontSee('name="quantity"', false)
+            ->assertDontSee(route('checkout.store'), false)
+            ->assertDontSeeText('Update quantity')
+            ->assertDontSeeText('Checkout');
     }
 
     public function test_guest_cannot_view_cart(): void
