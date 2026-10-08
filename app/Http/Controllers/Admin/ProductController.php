@@ -38,6 +38,12 @@ class ProductController extends Controller
     public function edit(Product $product): View
     {
         $categories = Category::query()->orderBy('name')->get();
+        $product->load([
+            'images' => fn ($query) => $query
+                ->orderByDesc('is_primary')
+                ->orderBy('sort_order')
+                ->orderBy('id'),
+        ]);
 
         return view('admin.products.edit', compact('product', 'categories'));
     }

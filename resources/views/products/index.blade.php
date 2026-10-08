@@ -24,7 +24,12 @@
             <ul>
                 @foreach ($products as $product)
                     <li>
-                            <h2><a href="{{ route('products.show', $product->slug) }}">{{ $product->name }}</a></h2>
+                        @if ($product->images->isNotEmpty())
+                            <a href="{{ route('products.show', $product->slug) }}">
+                                <img src="{{ asset('storage/'.$product->images->first()->path) }}" alt="{{ $product->images->first()->alt_text ?? $product->name }}" width="180">
+                            </a>
+                        @endif
+                        <h2><a href="{{ route('products.show', $product->slug) }}">{{ $product->name }}</a></h2>
                         <p>Category: {{ $product->category->name }}</p>
                         <p>Price: {{ $product->price }}</p>
                         @if ($product->stock_quantity > 0)

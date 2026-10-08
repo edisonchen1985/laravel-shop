@@ -4,6 +4,7 @@ namespace Tests\Feature\Products;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -70,6 +71,37 @@ class ProductCatalogTest extends TestCase
             ->assertSeeText($category->name)
             ->assertSeeText('A sturdy everyday bag.')
             ->assertSeeText('19.90');
+    }
+
+    public function test_catalog_and_product_details_show_primary_image_first(): void
+    {
+        // Arrange
+        $category = $this->createCategory('image-category');
+        $product = $this->createProduct($category, 'image-product');
+        $product->images()->create([
+            'path' => 'products/'.$product->id.'/secondary.png',
+            'alt_text' => 'Secondary view',
+            'sort_order' => 0,
+            'is_primary' => false,
+        ]);
+        $product->images()->create([
+            'path' => 'products/'.$product->id.'/primary.png',
+            'alt_text' => 'Primary view',
+            'sort_order' => 5,
+            'is_primary' => true,
+        ]);
+
+        // Act
+        $catalogResponse = $this->get(route('products.index'));
+        $detailResponse = $this->get(route('products.show', $product->slug));
+
+        // Assert
+        $catalogResponse->assertOk()->assertSee('products/'.$product->id.'/primary.png');
+        $detailResponse->assertOk()
+            ->assertSee('products/'.$product->id.'/primary.png')
+            ->assertSee('alt="Primary view"', false);
+        $this->assertInstanceOf(ProductImage::class, $detailResponse->viewData('product')->images->first());
+        $this->assertSame('products/'.$product->id.'/primary.png', $detailResponse->viewData('product')->images->first()->path);
     }
 
     public function test_inactive_product_is_not_publicly_visible(): void

@@ -22,7 +22,10 @@ class ProductController extends Controller
         $products = Product::query()
             ->where('status', 'active')
             ->whereHas('category', fn ($query) => $query->where('is_active', true))
-            ->with(['category', 'images' => fn ($query) => $query->orderBy('sort_order')])
+            ->with(['category', 'images' => fn ($query) => $query
+                ->orderByDesc('is_primary')
+                ->orderBy('sort_order')
+                ->orderBy('id')])
             ->when($categorySlug, function ($query, string $slug): void {
                 $query->whereHas('category', fn ($categoryQuery) => $categoryQuery
                     ->where('slug', $slug)
@@ -41,7 +44,10 @@ class ProductController extends Controller
 
         $product->load([
             'category',
-            'images' => fn ($query) => $query->orderBy('sort_order'),
+            'images' => fn ($query) => $query
+                ->orderByDesc('is_primary')
+                ->orderBy('sort_order')
+                ->orderBy('id'),
         ]);
 
         return view('products.show', compact('product'));
