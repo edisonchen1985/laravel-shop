@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Orders;
 
+use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -40,6 +42,56 @@ class OrderShowTest extends TestCase
             ->assertSeeText('Unit price: 19.90')
             ->assertSeeText('Quantity: 2')
             ->assertSeeText('Line total: 39.80');
+    }
+
+    public function test_order_detail_keeps_item_snapshot_after_product_changes_and_soft_delete(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $category = Category::create([
+            'name' => 'Snapshot Category',
+            'slug' => 'snapshot-category',
+            'is_active' => true,
+        ]);
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Original Product Name',
+            'slug' => 'original-product-name',
+            'sku' => 'ORIGINAL-SKU',
+            'price' => '19.90',
+            'stock_quantity' => 4,
+            'status' => 'active',
+        ]);
+        $order = $this->createOrder($user, 'ORD-SNAPSHOT-STABLE');
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'product_name' => 'Original Product Name',
+            'sku' => 'ORIGINAL-SKU',
+            'unit_price' => '19.90',
+            'quantity' => 2,
+            'line_total' => '39.80',
+        ]);
+        $product->update([
+            'name' => 'Changed Product Name',
+            'sku' => 'CHANGED-SKU',
+            'price' => '99.00',
+        ]);
+        $product->delete();
+
+        // Act
+        $response = $this->get(route('orders.show', $order));
+
+        // Assert
+        $response->assertOk()
+            ->assertSeeText('Original Product Name')
+            ->assertSeeText('ORIGINAL-SKU')
+            ->assertSeeText('Unit price: 19.90')
+            ->assertSeeText('Line total: 39.80')
+            ->assertDontSeeText('Changed Product Name')
+            ->assertDontSeeText('CHANGED-SKU')
+            ->assertDontSeeText('99.00');
     }
 
     public function test_user_cannot_view_another_users_order(): void

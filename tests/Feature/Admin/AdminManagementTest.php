@@ -25,6 +25,100 @@ class AdminManagementTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_regular_user_is_denied_from_every_admin_route(): void
+    {
+        // Arrange
+        $this->actingAs(User::factory()->create());
+        $category = $this->createCategory();
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Protected Product',
+            'slug' => 'protected-product',
+            'sku' => 'PROTECTED-001',
+            'price' => '10.00',
+            'stock_quantity' => 1,
+            'status' => 'draft',
+        ]);
+
+        $requests = [
+            ['GET', route('admin.products.index')],
+            ['GET', route('admin.products.create')],
+            ['POST', route('admin.products.store')],
+            ['GET', route('admin.products.edit', $product)],
+            ['PATCH', route('admin.products.update', $product)],
+            ['DELETE', route('admin.products.destroy', $product)],
+            ['GET', route('admin.categories.index')],
+            ['POST', route('admin.categories.store')],
+            ['PATCH', route('admin.categories.update', $category)],
+        ];
+
+        // Act / Assert
+        foreach ($requests as [$method, $uri]) {
+            $this->call($method, $uri, ['is_admin' => true])->assertForbidden();
+        }
+
+        $this->assertFalse((bool) auth()->user()->fresh()->is_admin);
+    }
+
+    public function test_product_form_rejects_invalid_category_status_and_duplicate_identifiers(): void
+    {
+        // Arrange
+        $this->actingAs($this->adminUser());
+        $category = $this->createCategory();
+        Product::create([
+            'category_id' => $category->id,
+            'name' => 'Reserved Product',
+            'slug' => 'reserved-product',
+            'sku' => 'RESERVED-001',
+            'price' => '10.00',
+            'stock_quantity' => 1,
+            'status' => 'draft',
+        ]);
+        $basePayload = [
+            'category_id' => $category->id,
+            'name' => 'Candidate Product',
+            'slug' => 'candidate-product',
+            'sku' => 'CANDIDATE-001',
+            'price' => '12.50',
+            'stock_quantity' => 2,
+            'status' => 'draft',
+        ];
+
+        // Act / Assert
+        foreach ([
+            [array_merge($basePayload, ['category_id' => 999999]), 'category_id'],
+            [array_merge($basePayload, ['status' => 'published']), 'status'],
+            [array_merge($basePayload, ['slug' => 'reserved-product']), 'slug'],
+            [array_merge($basePayload, ['sku' => 'RESERVED-001']), 'sku'],
+        ] as [$payload, $field]) {
+            $this->from(route('admin.products.create'))
+                ->post(route('admin.products.store'), $payload)
+                ->assertRedirect(route('admin.products.create'))
+                ->assertSessionHasErrors($field);
+        }
+
+        $this->assertSame(1, Product::query()->count());
+    }
+
+    public function test_category_form_rejects_duplicate_slug(): void
+    {
+        // Arrange
+        $this->actingAs($this->adminUser());
+        $this->createCategory();
+
+        // Act / Assert
+        $this->from(route('admin.categories.index'))
+            ->post(route('admin.categories.store'), [
+                'name' => 'Another Accessories',
+                'slug' => 'accessories',
+                'is_active' => true,
+            ])
+            ->assertRedirect(route('admin.categories.index'))
+            ->assertSessionHasErrors('slug');
+
+        $this->assertSame(1, Category::query()->count());
+    }
+
     public function test_admin_can_create_update_and_soft_delete_product(): void
     {
         $admin = $this->adminUser();
