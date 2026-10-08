@@ -49,6 +49,32 @@ class RegistrationTest extends TestCase
         $this->assertTrue(Hash::check('secure-password-123', $user->password));
     }
 
+    public function test_registration_cannot_grant_admin_access(): void
+    {
+        // Arrange
+        $this->assertGuest();
+
+        // Act
+        $response = $this->post(route('register.store'), [
+            'name' => 'Morgan Customer',
+            'email' => 'morgan@example.com',
+            'phone' => '555-0100',
+            'password' => 'secure-password-123',
+            'password_confirmation' => 'secure-password-123',
+            'is_admin' => true,
+        ]);
+
+        // Assert
+        $response->assertRedirect(route('cart.index'));
+        $user = User::query()->where('email', 'morgan@example.com')->firstOrFail();
+
+        $this->assertFalse($user->is_admin);
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'is_admin' => false,
+        ]);
+    }
+
     public function test_registration_rejects_duplicate_email(): void
     {
         // Arrange
