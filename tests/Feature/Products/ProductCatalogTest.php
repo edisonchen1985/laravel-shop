@@ -85,6 +85,19 @@ class ProductCatalogTest extends TestCase
         $response->assertNotFound();
     }
 
+    public function test_product_in_inactive_category_is_not_publicly_visible_by_url(): void
+    {
+        // Arrange
+        $category = $this->createCategory('inactive-category', false);
+        $product = $this->createProduct($category, 'hidden-product');
+
+        // Act
+        $response = $this->get(route('products.show', $product->slug));
+
+        // Assert
+        $response->assertNotFound();
+    }
+
     public function test_soft_deleted_product_is_not_publicly_visible(): void
     {
         // Arrange

@@ -139,6 +139,25 @@ class UpdateCartItemTest extends TestCase
         $this->assertDatabaseHas('cart_items', ['id' => $cartItem->id, 'quantity' => 2]);
     }
 
+    public function test_product_from_inactive_category_cannot_be_updated(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $product = $this->createProduct();
+        $cartItem = $this->createCartItem($user, $product, 2);
+        $product->category()->update(['is_active' => false]);
+
+        // Act
+        $response = $this->from('/cart')->patch(route('cart.items.update', $cartItem), [
+            'quantity' => 3,
+        ]);
+
+        // Assert
+        $response->assertRedirect('/cart')->assertSessionHasErrors('product_id');
+        $this->assertDatabaseHas('cart_items', ['id' => $cartItem->id, 'quantity' => 2]);
+    }
+
     public function test_soft_deleted_product_cannot_be_updated_and_quantity_stays_unchanged(): void
     {
         // Arrange

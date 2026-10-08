@@ -16,7 +16,7 @@ class CartService
     {
         return $user->cart()
             ->with([
-                'items.product' => fn ($query) => $query->withTrashed(),
+                'items.product' => fn ($query) => $query->withTrashed()->with('category'),
             ])
             ->first();
     }
@@ -47,6 +47,14 @@ class CartService
                 ->first();
 
             if (! $product || $product->status !== 'active') {
+                throw ValidationException::withMessages([
+                    'product_id' => 'This product is unavailable for purchase.',
+                ]);
+            }
+
+            $category = $product->category()->lockForUpdate()->first();
+
+            if (! $category || ! $category->is_active) {
                 throw ValidationException::withMessages([
                     'product_id' => 'This product is unavailable for purchase.',
                 ]);
@@ -105,6 +113,14 @@ class CartService
                 ->first();
 
             if (! $product || $product->trashed() || $product->status !== 'active') {
+                throw ValidationException::withMessages([
+                    'product_id' => 'This product is unavailable for purchase.',
+                ]);
+            }
+
+            $category = $product->category()->lockForUpdate()->first();
+
+            if (! $category || ! $category->is_active) {
                 throw ValidationException::withMessages([
                     'product_id' => 'This product is unavailable for purchase.',
                 ]);

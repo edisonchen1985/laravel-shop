@@ -113,6 +113,31 @@ class ViewCartTest extends TestCase
             ->assertSeeText('Unavailable');
     }
 
+    public function test_product_from_inactive_category_is_unavailable_and_can_be_removed(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $product = $this->createProduct();
+        $cart = Cart::create(['user_id' => $user->id]);
+        $cartItem = CartItem::create([
+            'cart_id' => $cart->id,
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]);
+        $product->category()->update(['is_active' => false]);
+
+        // Act
+        $response = $this->get(route('cart.index'));
+
+        // Assert
+        $response->assertOk()
+            ->assertSeeText($product->name)
+            ->assertSeeText('Unavailable')
+            ->assertSeeText('Remove')
+            ->assertSee(route('cart.items.destroy', $cartItem), false);
+    }
+
     public function test_guest_cannot_view_cart(): void
     {
         // Arrange
@@ -147,6 +172,7 @@ class ViewCartTest extends TestCase
 
         $this->assertTrue($loadedCart->relationLoaded('items'));
         $this->assertTrue($loadedCart->items->first()->relationLoaded('product'));
+        $this->assertTrue($loadedCart->items->first()->product->relationLoaded('category'));
     }
 
     /**

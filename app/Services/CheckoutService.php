@@ -69,6 +69,14 @@ class CheckoutService
                     ]);
                 }
 
+                $category = $product->category()->lockForUpdate()->first();
+
+                if (! $category || ! $category->is_active) {
+                    throw ValidationException::withMessages([
+                        'product_id' => 'A product in your cart is unavailable for purchase.',
+                    ]);
+                }
+
                 if ($cartItem->quantity > $product->stock_quantity) {
                     throw ValidationException::withMessages([
                         'quantity' => 'A product in your cart does not have enough stock.',

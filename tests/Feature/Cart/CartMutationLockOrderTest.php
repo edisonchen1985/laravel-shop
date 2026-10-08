@@ -32,7 +32,7 @@ class CartMutationLockOrderTest extends TestCase
         app(CartService::class)->addItem($user, $product->id, 1);
 
         // Assert
-        $this->assertLockQueriesFollowOrder($queries, ['users', 'carts', 'cart_items', 'products']);
+        $this->assertLockQueriesFollowOrder($queries, ['users', 'carts', 'cart_items', 'products', 'categories']);
     }
 
     public function test_update_item_locks_user_cart_cart_item_then_product(): void
@@ -50,7 +50,7 @@ class CartMutationLockOrderTest extends TestCase
         app(CartService::class)->updateItem($user, $cartItem->id, 2);
 
         // Assert
-        $this->assertLockQueriesFollowOrder($queries, ['users', 'carts', 'cart_items', 'products']);
+        $this->assertLockQueriesFollowOrder($queries, ['users', 'carts', 'cart_items', 'products', 'categories']);
     }
 
     public function test_delete_item_locks_user_cart_then_cart_item(): void
@@ -86,7 +86,7 @@ class CartMutationLockOrderTest extends TestCase
         app(CheckoutService::class)->checkout($user);
 
         // Assert
-        $this->assertLockQueriesFollowOrder($queries, ['users', 'carts', 'cart_items', 'products']);
+        $this->assertLockQueriesFollowOrder($queries, ['users', 'carts', 'cart_items', 'products', 'categories']);
     }
 
     /**

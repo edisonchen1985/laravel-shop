@@ -162,6 +162,27 @@ class CheckoutTest extends TestCase
         $this->assertDatabaseHas('cart_items', ['id' => $cartItem->id]);
     }
 
+    public function test_inactive_category_rejects_checkout_and_preserves_cart_and_stock(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $product = $this->createProduct(['stock_quantity' => 5]);
+        $cart = $this->createCart($user);
+        $cartItem = $this->addCartItem($cart, $product, 2);
+        $product->category()->update(['is_active' => false]);
+
+        // Act
+        $response = $this->from('/cart')->post(route('checkout.store'));
+
+        // Assert
+        $response->assertRedirect('/cart')->assertSessionHasErrors('product_id');
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('order_items', 0);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'stock_quantity' => 5]);
+        $this->assertDatabaseHas('cart_items', ['id' => $cartItem->id, 'quantity' => 2]);
+    }
+
     public function test_soft_deleted_product_rejects_checkout(): void
     {
         // Arrange

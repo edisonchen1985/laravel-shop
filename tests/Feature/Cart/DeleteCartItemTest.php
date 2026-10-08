@@ -31,6 +31,23 @@ class DeleteCartItemTest extends TestCase
         $this->assertDatabaseMissing('cart_items', ['id' => $cartItem->id]);
     }
 
+    public function test_user_can_delete_cart_item_when_its_category_is_inactive(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $product = $this->createProduct();
+        $cartItem = $this->createCartItem($user, $product);
+        $product->category()->update(['is_active' => false]);
+
+        // Act
+        $response = $this->from('/cart')->delete(route('cart.items.destroy', $cartItem));
+
+        // Assert
+        $response->assertRedirect('/cart')->assertSessionHas('success');
+        $this->assertDatabaseMissing('cart_items', ['id' => $cartItem->id]);
+    }
+
     public function test_user_cannot_delete_another_users_cart_item(): void
     {
         // Arrange

@@ -3,7 +3,6 @@
 namespace Tests\Feature\Cart;
 
 use App\Models\Cart;
-use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
@@ -124,6 +123,26 @@ class AddCartItemTest extends TestCase
         // Assert
         $response->assertRedirect('/products/canvas-bag')
             ->assertSessionHasErrors('product_id');
+        $this->assertDatabaseMissing('carts', ['user_id' => $user->id]);
+        $this->assertDatabaseMissing('cart_items', ['product_id' => $product->id]);
+    }
+
+    public function test_product_from_inactive_category_cannot_be_added(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $product = $this->createProduct();
+        $product->category()->update(['is_active' => false]);
+
+        // Act
+        $response = $this->from('/products')->post(route('cart.items.store'), [
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]);
+
+        // Assert
+        $response->assertRedirect('/products')->assertSessionHasErrors('product_id');
         $this->assertDatabaseMissing('carts', ['user_id' => $user->id]);
         $this->assertDatabaseMissing('cart_items', ['product_id' => $product->id]);
     }

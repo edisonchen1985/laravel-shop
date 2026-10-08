@@ -18,7 +18,11 @@
                 @foreach ($cart->items as $item)
                     @php
                         $product = $item->product;
-                        $unavailable = ! $product || $product->trashed() || $product->status !== 'active';
+                        $unavailable = ! $product
+                            || $product->trashed()
+                            || $product->status !== 'active'
+                            || ! $product->category
+                            || ! $product->category->is_active;
                     @endphp
 
                     <li>
@@ -28,6 +32,12 @@
                         @if ($unavailable)
                             <span>Unavailable</span>
                         @endif
+
+                        <form method="POST" action="{{ route('cart.items.destroy', $item) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit">Remove</button>
+                        </form>
                     </li>
                 @endforeach
             </ul>
