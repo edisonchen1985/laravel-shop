@@ -25,7 +25,7 @@ class ProductRequest extends FormRequest
             'slug' => ['required', 'string', 'max:220', Rule::unique('products', 'slug')->ignore($productId)],
             'description' => ['nullable', 'string'],
             'sku' => ['nullable', 'string', 'max:100', Rule::unique('products', 'sku')->ignore($productId)],
-            'price' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
+            'price' => ['required', 'numeric', 'min:0', 'max:99999999.99', 'decimal:0,2'],
             'stock_quantity' => ['required', 'integer', 'min:0'],
             'status' => ['required', Rule::in(['draft', 'active', 'inactive'])],
         ];

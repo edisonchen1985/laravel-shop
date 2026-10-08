@@ -103,6 +103,87 @@ class CheckoutTest extends TestCase
         ]);
     }
 
+    public function test_checkout_accepts_the_maximum_decimal_line_and_order_amount(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $product = $this->createProduct([
+            'price' => '99999999.99',
+            'stock_quantity' => 1,
+        ]);
+        $cart = $this->createCart($user);
+        $this->addCartItem($cart, $product, 1);
+
+        // Act
+        $response = $this->post(route('checkout.store'));
+
+        // Assert
+        $response->assertRedirect(route('cart.index'));
+        $order = Order::query()->with('items')->firstOrFail();
+        $this->assertSame('99999999.99', $order->subtotal);
+        $this->assertSame('99999999.99', $order->total);
+        $this->assertSame('99999999.99', $order->items->first()->unit_price);
+        $this->assertSame('99999999.99', $order->items->first()->line_total);
+    }
+
+    public function test_checkout_rejects_line_total_above_decimal_maximum_and_rolls_back(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $product = $this->createProduct([
+            'price' => '50000000.00',
+            'stock_quantity' => 2,
+        ]);
+        $cart = $this->createCart($user);
+        $cartItem = $this->addCartItem($cart, $product, 2);
+
+        // Act
+        $response = $this->from('/cart')->post(route('checkout.store'));
+
+        // Assert
+        $response->assertRedirect('/cart')->assertSessionHasErrors('quantity');
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('order_items', 0);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'stock_quantity' => 2]);
+        $this->assertDatabaseHas('cart_items', ['id' => $cartItem->id, 'quantity' => 2]);
+    }
+
+    public function test_checkout_rejects_subtotal_above_decimal_maximum_and_rolls_back(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $cart = $this->createCart($user);
+        $firstProduct = $this->createProduct([
+            'name' => 'First High Value Product',
+            'slug' => 'first-high-value-product',
+            'price' => '60000000.00',
+            'stock_quantity' => 1,
+        ]);
+        $secondProduct = $this->createProduct([
+            'name' => 'Second High Value Product',
+            'slug' => 'second-high-value-product',
+            'price' => '60000000.00',
+            'stock_quantity' => 1,
+        ]);
+        $firstCartItem = $this->addCartItem($cart, $firstProduct, 1);
+        $secondCartItem = $this->addCartItem($cart, $secondProduct, 1);
+
+        // Act
+        $response = $this->from('/cart')->post(route('checkout.store'));
+
+        // Assert
+        $response->assertRedirect('/cart')->assertSessionHasErrors('cart');
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('order_items', 0);
+        $this->assertDatabaseHas('products', ['id' => $firstProduct->id, 'stock_quantity' => 1]);
+        $this->assertDatabaseHas('products', ['id' => $secondProduct->id, 'stock_quantity' => 1]);
+        $this->assertDatabaseHas('cart_items', ['id' => $firstCartItem->id, 'quantity' => 1]);
+        $this->assertDatabaseHas('cart_items', ['id' => $secondCartItem->id, 'quantity' => 1]);
+    }
+
     public function test_checkout_decrements_stock_and_clears_cart_items(): void
     {
         // Arrange

@@ -69,6 +69,102 @@ class AdminManagementTest extends TestCase
         $this->assertSoftDeleted('products', ['id' => $product->id]);
     }
 
+    public function test_admin_product_prices_accept_zero_normal_and_decimal_maximum(): void
+    {
+        // Arrange
+        $this->actingAs($this->adminUser());
+        $category = $this->createCategory();
+
+        // Act / Assert
+        foreach ([
+            ['0', '0.00'],
+            ['19.90', '19.90'],
+            ['99999999.99', '99999999.99'],
+        ] as $index => [$price, $expectedPrice]) {
+            $slug = 'price-boundary-'.$index;
+
+            $this->post(route('admin.products.store'), [
+                'category_id' => $category->id,
+                'name' => 'Price Boundary '.$index,
+                'slug' => $slug,
+                'sku' => null,
+                'price' => $price,
+                'stock_quantity' => 1,
+                'status' => 'draft',
+            ])->assertRedirect(route('admin.products.index'));
+
+            $product = Product::query()->where('slug', $slug)->firstOrFail();
+            $this->assertSame($expectedPrice, $product->price);
+        }
+    }
+
+    public function test_admin_product_price_rejects_amounts_outside_decimal_range(): void
+    {
+        // Arrange
+        $this->actingAs($this->adminUser());
+        $category = $this->createCategory();
+
+        // Act / Assert
+        foreach (['100000000', '19.999', '-0.01'] as $index => $price) {
+            $slug = 'invalid-price-'.$index;
+
+            $this->from(route('admin.products.create'))
+                ->post(route('admin.products.store'), [
+                    'category_id' => $category->id,
+                    'name' => 'Invalid Price '.$index,
+                    'slug' => $slug,
+                    'sku' => null,
+                    'price' => $price,
+                    'stock_quantity' => 1,
+                    'status' => 'draft',
+                ])
+                ->assertRedirect(route('admin.products.create'))
+                ->assertSessionHasErrors('price');
+
+            $this->assertDatabaseMissing('products', ['slug' => $slug]);
+        }
+    }
+
+    public function test_admin_product_price_limit_also_applies_to_updates(): void
+    {
+        // Arrange
+        $this->actingAs($this->adminUser());
+        $category = $this->createCategory();
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Existing Product',
+            'slug' => 'existing-product',
+            'price' => '19.90',
+            'stock_quantity' => 2,
+            'status' => 'draft',
+        ]);
+        $payload = [
+            'category_id' => $category->id,
+            'name' => 'Existing Product',
+            'slug' => 'existing-product',
+            'sku' => null,
+            'stock_quantity' => 2,
+            'status' => 'draft',
+        ];
+
+        // Act / Assert: the maximum value is accepted on update.
+        $this->patch(route('admin.products.update', $product), array_merge($payload, [
+            'price' => '99999999.99',
+        ]))->assertRedirect(route('admin.products.index'));
+
+        $this->assertSame('99999999.99', $product->refresh()->price);
+
+        // Act / Assert: a value above the database limit is rejected without changing it.
+        $this->from(route('admin.products.edit', $product))
+            ->patch(route('admin.products.update', $product), array_merge($payload, [
+                'price' => '100000000',
+            ]))
+            ->assertRedirect(route('admin.products.edit', $product))
+            ->assertSessionHasErrors('price');
+
+        $this->assertSame('99999999.99', $product->refresh()->price);
+    }
+
     public function test_admin_can_create_and_deactivate_category(): void
     {
         $admin = $this->adminUser();

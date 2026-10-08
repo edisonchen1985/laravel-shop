@@ -11,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 
 class CheckoutService
 {
+    private const MAX_AMOUNT_CENTS = 9_999_999_999;
+
     public function checkout(User $user): Order
     {
         return DB::transaction(function () use ($user): Order {
@@ -84,7 +86,27 @@ class CheckoutService
                 }
 
                 $unitPriceCents = $this->toCents((string) $product->price);
+
+                if ($unitPriceCents < 0 || $unitPriceCents > self::MAX_AMOUNT_CENTS) {
+                    throw ValidationException::withMessages([
+                        'product_id' => 'A product price is outside the supported amount range.',
+                    ]);
+                }
+
+                if ($unitPriceCents > 0 && $cartItem->quantity > intdiv(self::MAX_AMOUNT_CENTS, $unitPriceCents)) {
+                    throw ValidationException::withMessages([
+                        'quantity' => 'The order item amount exceeds the supported amount range.',
+                    ]);
+                }
+
                 $lineTotalCents = $unitPriceCents * $cartItem->quantity;
+
+                if ($lineTotalCents > self::MAX_AMOUNT_CENTS - $subtotalCents) {
+                    throw ValidationException::withMessages([
+                        'cart' => 'The order total exceeds the supported amount range.',
+                    ]);
+                }
+
                 $subtotalCents += $lineTotalCents;
 
                 $order->items()->create([
@@ -112,9 +134,12 @@ class CheckoutService
 
     private function toCents(string $amount): int
     {
+        $isNegative = str_starts_with($amount, '-');
+        $amount = ltrim($amount, '+-');
         [$units, $fraction] = array_pad(explode('.', $amount, 2), 2, '0');
+        $cents = ((int) $units * 100) + (int) str_pad(substr($fraction, 0, 2), 2, '0');
 
-        return ((int) $units * 100) + (int) str_pad(substr($fraction, 0, 2), 2, '0');
+        return $isNegative ? -$cents : $cents;
     }
 
     private function fromCents(int $amount): string

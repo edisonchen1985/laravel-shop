@@ -25,7 +25,7 @@
 @error('sku') <p>{{ $message }}</p> @enderror
 
 <label for="price">Price</label>
-<input id="price" name="price" type="number" min="0" step="0.01" value="{{ old('price', $product->price ?? '') }}" required>
+<input id="price" name="price" type="number" min="0" max="99999999.99" step="0.01" value="{{ old('price', $product->price ?? '') }}" required>
 @error('price') <p>{{ $message }}</p> @enderror
 
 <label for="stock_quantity">Stock quantity</label>
