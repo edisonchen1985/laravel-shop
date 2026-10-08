@@ -107,6 +107,25 @@ class AddCartItemTest extends TestCase
         $this->assertDatabaseMissing('cart_items', ['product_id' => $product->id]);
     }
 
+    public function test_product_with_no_stock_cannot_be_added_to_cart(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $product = $this->createProduct(['stock_quantity' => 0]);
+
+        // Act
+        $response = $this->from('/products/canvas-bag')->post(route('cart.items.store'), [
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]);
+
+        // Assert
+        $response->assertRedirect('/products/canvas-bag')->assertSessionHasErrors('quantity');
+        $this->assertDatabaseMissing('carts', ['user_id' => $user->id]);
+        $this->assertDatabaseMissing('cart_items', ['product_id' => $product->id]);
+    }
+
     public function test_inactive_product_cannot_be_added(): void
     {
         // Arrange

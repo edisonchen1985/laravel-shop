@@ -13,6 +13,9 @@ class ProductController extends Controller
     {
         $categorySlug = $request->query('category');
         $categorySlug = is_string($categorySlug) ? $categorySlug : null;
+        $search = $request->query('search');
+        $search = is_string($search) ? trim($search) : null;
+        $search = $search !== '' ? $search : null;
 
         $categories = Category::query()
             ->where('is_active', true)
@@ -21,6 +24,7 @@ class ProductController extends Controller
 
         $products = Product::query()
             ->where('status', 'active')
+            ->where('stock_quantity', '>', 0)
             ->whereHas('category', fn ($query) => $query->where('is_active', true))
             ->with(['category', 'images' => fn ($query) => $query
                 ->orderByDesc('is_primary')
@@ -31,11 +35,12 @@ class ProductController extends Controller
                     ->where('slug', $slug)
                     ->where('is_active', true));
             })
+            ->when($search, fn ($query, string $search) => $query->where('name', 'like', '%'.$search.'%'))
             ->orderBy('name')
             ->paginate(12)
             ->withQueryString();
 
-        return view('products.index', compact('categories', 'products'));
+        return view('products.index', compact('categories', 'products', 'categorySlug', 'search'));
     }
 
     public function show(Product $product): View

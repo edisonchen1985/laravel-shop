@@ -20,6 +20,12 @@
             <p>{{ $product->description }}</p>
         @endif
 
+        @if ($product->stock_quantity > 0)
+            <p>Status: In stock ({{ $product->stock_quantity }} available)</p>
+        @else
+            <p>Status: Out of stock</p>
+        @endif
+
         @if ($product->images->isNotEmpty())
             <ul>
                 @foreach ($product->images as $image)
